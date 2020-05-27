@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en"><meta charset="utf-8"><meta name="generator" content="Hugo 0.71.0" /><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark"><title>记录一次Lnmp环境搭建&nbsp;&ndash;&nbsp;Notepadium</title><link rel="stylesheet" href="/css/core.min.d395a79dded74421e74ec643c2073f04f7ce037c87be755c7ca30a168d12828f30f6f6f16faa88e38c1d1a9d5d107d88.css" integrity="sha384-05Wnnd7XRCHnTsZDwgc/BPfOA3yHvnVcfKMKFo0Sgo8w9vbxb6qI44wdGp1dEH2I"><meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content="记录一次Lnmp环境搭建" /><body><section id="header">
+    <div class="header wrap"><span class="header left-side"><a class="site home" href="/"><span class="site name">Notepadium</span></a></span>
+        <span class="header right-side"><div class="nav wrap"><nav class="nav"><a class="nav item" href="/categories/">Categories</a><a class="nav item" href="/tags/">Tags</a><a class="nav item" href="/about">About</a><a class="nav item" href="https://gohugo%2eio/"target="_blank">Hugo</a></nav></div></span></div><div class="site slogan"><span class="title">100% JavaScript-free</span></div></section><section id="content"><div class="article-container"><section class="article header">
+    <h1 class="article title">记录一次Lnmp环境搭建</h1><p class="article date">Monday, May 25, 2020</p></section><article class="article markdown-body"><h4 id="我准备了一台安装了centos-75-镜像的云服务器">我准备了一台安装了centos 7.5 镜像的云服务器</h4>
+<h4 id="firewalld与iptables简介">firewalld与iptables简介</h4>
+<h5 id="我们可以称其为linux的防火墙在centos7及以上版本firewalld-取代了iptables这两者的防火墙策略是不同的">我们可以称其为linux的防火墙。在centos7及以上版本，firewalld 取代了iptables，这两者的防火墙策略是不同的。</h5>
+<h5 id="iptables-防火墙策略是交给内核层面的netfilter网络过滤器来处理的">iptables 防火墙策略是交给内核层面的netfilter网络过滤器来处理的</h5>
+<h5 id="firewalld-防火墙策略是交给内核层面的nftables包过滤框架来处理的">firewalld 防火墙策略是交给内核层面的nftables包过滤框架来处理的</h5>
+<h5 id="iptables-每次更改都需要先清除所有旧的规则然后重新加载所有规则">iptables 每次更改都需要先清除所有旧的规则，然后重新加载所有规则</h5>
+<h5 id="firewalld-任何规则的更改都不需要对整个防火墙规则重新加载firewalld默认出口是全放开的">firewalld 任何规则的更改都不需要对整个防火墙规则重新加载。firewalld默认出口是全放开的</h5>
+<h4 id="首先检查防火墙状态">首先检查防火墙状态</h4>
+<pre><code>systemctl status firewall
+</code></pre><h5 id="此时发现出现一行警告信息">此时发现出现一行警告信息</h5>
+<pre><code>Unit firewall.service could not be found.
+</code></pre><h4 id="安装firewalld">安装firewalld</h4>
+<h5 id="提示以下软件安装过程中遇到了-is-this-ok-ydn-的提示请自行填写y或者安装命令自己带上--y">提示：以下软件安装过程中遇到了 “Is this ok [y/d/N]: ”的提示，请自行填写y或者安装命令自己带上 -y</h5>
+<pre><code>sudo yum install firewalld
+</code></pre><h4 id="开启防火墙">开启防火墙</h4>
+<pre><code>sudo systemctl start firewalld
+</code></pre><h4 id="查看防火墙状态">查看防火墙状态</h4>
+<pre><code>systemctl status firewalld
+</code></pre><p><img  src="http://chuantu.xyz/t6/728/1587003457x1033347913.jpg"
+        alt="image"/></p>
+<h4 id="放开http与https协议">放开http与https协议</h4>
+<pre><code>sudo firewall-cmd --zone=public --add-service=http --permanent
+sudo firewall-cmd --zone=public --add-service=https --permanent
+</code></pre><h4 id="开放80与443端口">开放80与443端口</h4>
+<pre><code>sudo firewall-cmd --zone=public --add-port=80/tcp --permanent
+
+sudo firewall-cmd --zone=public --add-port=443/tcp --permanent
+</code></pre><h4 id="规则重载">规则重载</h4>
+<pre><code>sudo firewall-cmd --reload
+</code></pre><h4 id="规则查看">规则查看</h4>
+<pre><code>sudo firewall-cmd --list-ports
+</code></pre><h4 id="正确打印信息应该是">正确打印信息应该是</h4>
+<pre><code>80/tcp 443/tcp
+</code></pre><h4 id="安装几个-php-开发中源码会依赖到的库">安装几个 PHP 开发中源码会依赖到的库</h4>
+<pre><code>// pcre 是一个perl库，包括perl兼容的正则表达式
+// nginx的rewrite同样依赖于这个库
+yum install pcre pcre-devel
+// zlib 是一个压缩库，提供了很多压缩和解压缩的方式
+// nginx使用zlib对http包的内容进行gzip
+sudo yum install zlib zlib-devel
+// OpenSSL是一个 SSL 协议的开源实现，许多软件中的安全部分都使用到了它
+// 主要分为三个功能部分 密码算法库 SSL 协议库 和应用程序
+sudo yum install openssl openssl-devel
+</code></pre><h4 id="配置nginx源">配置nginx源</h4>
+<pre><code>sudo rpm -Uvh http://nginx.org/packages/centos/7/noarch/RPMS/nginx-release-centos-7-0.el7.ngx.noarch.rpm
+</code></pre><h4 id="安装nginx">安装nginx</h4>
+<pre><code>sudo yum install nginx
+</code></pre><h4 id="启动nginx">启动nginx</h4>
+<pre><code>systemctl start nginx
+</code></pre><p><img  src="http://chuantu.xyz/t6/728/1587004706x1822611417.jpg"
+        alt="image"/></p>
+<h4 id="外网访问">外网访问</h4>
+<h5 id="访问ip地址默认80端口出现welcome-to-nginx">访问ip地址(默认80端口)，出现Welcome to nginx!</h5>
+<h5 id="如果你使用了阿里云等厂家的云服务器请自行到控制台去配置对应的安全组规则然后启用安全组如果你配置安全组是无法访问到的如何配置安全组很简单请自行了解">如果你使用了阿里云等厂家的云服务器，请自行到控制台去配置对应的安全组规则然后启用安全组，如果你配置安全组，是无法访问到的，如何配置安全组很简单，请自行了解。</h5>
+<h4 id="配置新的yum源">配置新的yum源</h4>
+<pre><code>sudo rpm -Uvh https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+sudo rpm -Uvh https://mirror.webtatic.com/yum/el7/webtatic-release.rpm
+</code></pre><h4 id="安装-php72及其开发中需要的依赖库">安装 PHP7.2及其开发中需要的依赖库</h4>
+<pre><code>sudo yum  install php72w php72w-cli php72w-common php72w-devel php72w-embedded php72w-fpm php72w-gd php72w-mbstring php72w-mysqlnd php72w-opcache php72w-pdo php72w-xml
+</code></pre><h4 id="查看php-fpm状态">查看php-fpm状态</h4>
+<pre><code>sudo systemctl status php-fpm
+// Active: inactive (dead)
+</code></pre><h4 id="启动php-fpm">启动php-fpm</h4>
+<pre><code>sudo systemctl start php-fpm
+</code></pre><h4 id="再次查看php-fpm状态">再次查看php-fpm状态</h4>
+<pre><code>sudo systemctl status php-fpm
+// Active: active (running) since Thu 2020-04-16 12:10:01 CST; 1s ago
+</code></pre><h4 id="为php-fpm设置开机启动">为php-fpm设置开机启动</h4>
+<pre><code>sudo systemctl enable php-fpm
+</code></pre><h4 id="配置nginx支持php-fpm">配置nginx支持php-fpm</h4>
+<h4 id="1-找到nginx配置文件中的defaultconf文件">1. 找到nginx配置文件中的default.conf文件</h4>
+<h5 id="etcnginxconfddefaultconf">/etc/nginx/conf.d/default.conf</h5>
+<h4 id="2-sudo-vim-etcnginxconfddefaultconf">2. sudo vim /etc/nginx/conf.d/default.conf</h4>
+<h4 id="3-打开defaultconf文件中下面一段内容的注释并作出同样的修改">3. 打开default.conf文件中下面一段内容的注释，并作出同样的修改</h4>
+<pre><code>location ~ \.php$ {
+    #   root           html;
+        root           /usr/share/nginx/html;
+        fastcgi_pass   127.0.0.1:9000;
+        fastcgi_index  index.php;
+    #    fastcgi_param  SCRIPT_FILENAME  /scripts$fastcgi_script_name;
+        fastcgi_param  SCRIPT_FILENAME  $document_root$fastcgi_script_name;
+        include        fastcgi_params;
+    }
+</code></pre><h4 id="4-重启nginx">4. 重启nginx</h4>
+<pre><code>sudo systemctl restart nginx
+</code></pre><h4 id="5-在usrsharenginxhtml文件夹下创建一个php测试文件如">5. 在/usr/share/nginx/html文件夹下创建一个php测试文件，如：</h4>
+<pre><code>sudo vim /usr/share/nginx/html/index.pgp
+</code></pre><h4 id="6-简单写两行代码">6. 简单写两行代码</h4>
+<pre><code>&lt;?php
+phpinfo();
+</code></pre><h4 id="7-此时再次访问ipindexphp-展示php相关配置则说明配置成功">7. 此时再次访问ip/index.php 展示php相关配置，则说明配置成功</h4>
+<h4 id="安装数据库mysql--mariadb">安装数据库(mysql =&gt; mariadb)</h4>
+<h4 id="卸载原有的mariadb">卸载原有的mariadb</h4>
+<pre><code>// 查看一下有哪些
+rpm -qa|grep mariadb
+// 我这里只有mariadb-libs-5.5.60-1.el7_5.x86_64
+sudo yum remove mariadb-libs-5.5.60-1.el7_5.x86_64
+</code></pre><h4 id="配置新的yum源-1">配置新的yum源</h4>
+<h5 id="官方源-httpyummariadborg-按照自己的需求来选择">官方源 <a href="http://yum.mariadb.org/">http://yum.mariadb.org/</a> 按照自己的需求来选择</h5>
+<h5 id="国内源-httpsmirrorsustceducnmariadb">国内源 <a href="https://mirrors.ustc.edu.cn/mariadb/">https://mirrors.ustc.edu.cn/mariadb/</a></h5>
+<h4 id="新建配置文件">新建配置文件</h4>
+<pre><code>sudo vim /etc/yum.repos.d/MariaDB.repo
+</code></pre><h4 id="写入以下内容">写入以下内容</h4>
+<pre><code>[mariadb]
+name = MariaDB
+baseurl = https://mirrors.ustc.edu.cn/mariadb/yum/10.2/centos7-amd64
+gpgkey=https://mirrors.ustc.edu.cn/mariadb/yum/RPM-GPG-KEY-MariaDB
+gpgcheck=1
+</code></pre><h4 id="更新yum源">更新yum源</h4>
+<pre><code>sudo yum clean&amp;&amp;yum update
+</code></pre><h4 id="安装mariadb">安装mariadb</h4>
+<pre><code>sudo yum install MariaDB-client MariaDB-server
+</code></pre><h4 id="启动mariadb">启动mariadb</h4>
+<pre><code>sudo systemctl start mariadb
+</code></pre><h4 id="查看状态">查看状态</h4>
+<pre><code>sudo systemctl status mariadb
+</code></pre><h4 id="设置为开机启动">设置为开机启动</h4>
+<pre><code>sudo systemctl enable mariadb
+</code></pre><h4 id="初始化mariadb-我的选项只作为参考-请结合实际场景">初始化mariadb 我的选项只作为参考 请结合实际场景</h4>
+<pre><code>sudo mysql_secure_installation
+</code></pre><h4 id="回车后进入真心话大冒险环节">回车后进入真心话大冒险环节</h4>
+<h5 id="1-set-root-password-yn-是否设置root密码直接回车">1. Set root password? [Y/n] 是否设置root密码？直接回车</h5>
+<h5 id="2-new-password-请再此冒号后输入新密码该输入密码不可见">2. New password: 请再此冒号后输入新密码，该输入密码不可见</h5>
+<h5 id="3-re-enter-new-password-请在此冒号后再次输入新密码">3. Re-enter new password: 请在此冒号后再次输入新密码</h5>
+<h5 id="4-remove-anonymous-users-yn-是否删除匿名用户直接回车">4. Remove anonymous users? [Y/n] 是否删除匿名用户？直接回车</h5>
+<h5 id="5-disallow-root-login-remotely-yn-是否禁止root用户远程登录">5. Disallow root login remotely? [Y/n] 是否禁止root用户远程登录？</h5>
+<h5 id="6-n-我需要远程登录所以我选择了否">6. n 我需要远程登录，所以我选择了否</h5>
+<h5 id="7-remove-test-database-and-access-to-it-yn-是否删除测试数据库test-直接回车就好">7. Remove test database and access to it? [Y/n] 是否删除测试数据库test ?直接回车就好</h5>
+<h5 id="8-reload-privilege-tables-now-yn是否重新加载权限表直接回车">8. Reload privilege tables now? [Y/n]是否重新加载权限表？直接回车</h5>
+<h4 id="mysql--uroot--p-回车输入密码后即可登录数据库">mysql -uroot -p 回车输入密码后即可登录数据库</h4>
+<h4 id="做一些简单的配置">做一些简单的配置</h4>
+<pre><code>// 服务端
+sudo vim /etc/my.cnf.d/server.cnf
+</code></pre><h4 id="在mysqld下面添加以下代码">在mysqld下面添加以下代码</h4>
+<pre><code>init_connect='SET collation_connection = utf8_unicode_ci' 
+init_connect='SET NAMES utf8' 
+character-set-server=utf8 
+collation-server=utf8_unicode_ci 
+skip-character-set-client-handshake
+</code></pre><p><img  src="http://chuantu.xyz/t6/728/1587012236x1033347913.jpg"
+        alt="image"/></p>
+<h4 id="继续配置客户端">继续配置客户端</h4>
+<pre><code>sudo vim /etc/my.cnf.d/mysql-clients.cnf
+</code></pre><h4 id="在mysql后面添加以下代码-和上面操作类似--我就不截图了">在mysql后面添加以下代码 和上面操作类似  我就不截图了</h4>
+<pre><code>default-character-set=utf8
+</code></pre><h4 id="重新启动mariadb服务">重新启动mariadb服务</h4>
+<pre><code>sudo systemctl restart mariadb
+</code></pre><h4 id="搭建完成童鞋们可以愉快的玩耍了">搭建完成，童鞋们可以愉快的玩耍了</h4>
+<h4 id="远程连接云服务器的mysql报错拒绝访问如何处理">远程连接云服务器的mysql报错拒绝访问如何处理？</h4>
+<h5 id="1-首先mysql初始化的时候设置了允许远程连接">1. 首先mysql初始化的时候设置了允许远程连接</h5>
+<h5 id="2-其次防火墙对外暴露了3306端口">2. 其次防火墙对外暴露了3306端口</h5>
+<h5 id="21-查看已暴露的端口">2.1 查看已暴露的端口</h5>
+<pre><code>sudo firewall-cmd --list-ports
+</code></pre><h5 id="22-如果没有包含3306">2.2 如果没有包含3306</h5>
+<h5 id="23-sudo-firewall-cmd---zonepublic---add-port3306tcp---permanent">2.3 sudo firewall-cmd &ndash;zone=public &ndash;add-port=3306/tcp &ndash;permanent</h5>
+<pre><code>sudo firewall-cmd --zone=public --add-port=3306/tcp --permanent
+</code></pre><h5 id="24-重新载入规则">2.4 重新载入规则</h5>
+<pre><code>sudo firewall-cmd --reload
+</code></pre><h5 id="3-配置mysql">3. 配置mysql</h5>
+<h5 id="31-mysql--uroot--p登录">3.1 mysql -uroot -p登录</h5>
+<h5 id="32-为对应的数据库专门新建一个对应的用户并赋予其权限对某个数据库进行远程访问">3.2 为对应的数据库专门新建一个对应的用户并赋予其权限对某个数据库进行远程访问</h5>
+<pre><code>// 把******换成你的密码
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY '******' WITH GRANT OPTION; 
+</code></pre><h5 id="33-刷新权限">3.3 刷新权限</h5>
+<pre><code>FLUSH PRIVILEGES;
+quit
+</code></pre><h5 id="34-配置云服务器的安全组tcp-协议3006入方向规则">3.4 配置云服务器的安全组TCP 协议3006入方向规则</h5>
+<h4 id="注配置时参考了百度上的一些博客以及linux依赖库的一些介绍">注：配置时参考了百度上的一些博客以及linux依赖库的一些介绍</h4>
+</article></div>
+<div class="article bottom"></div></section><section id="footer"><div class="footer-wrap">
+    <p class="copyright">©2019 Notepadium.</p>
+    <p class="powerby"><span>Powered by </span><a href="https://gohugo.io" 
+        target="_blank">Hugo</a><span> and the </span><a href="https://themes.gohugo.io/hugo-notepadium/" 
+        target="_blank">Notepadium</a></p>
+</div></section></body>
+
+</html>
